@@ -129,8 +129,25 @@ export default function Index() {
     navigator.clipboard.writeText(text);
   };
 
+  const stopRecording = () => {
+    if (recognitionRef.current && isRecording) {
+      recognitionRef.current.stop();
+      setIsRecording(false);
+      setAutoMode(false);
+      if (restartTimeoutRef.current) {
+        clearTimeout(restartTimeoutRef.current);
+      }
+      playStopSound();
+    }
+  };
+
   const copyAndRestart = () => {
     if (!text) return;
+    
+    // Останавливаем текущую запись если активна
+    if (isRecording) {
+      stopRecording();
+    }
     
     // Копируем текст
     navigator.clipboard.writeText(text);
@@ -138,12 +155,14 @@ export default function Index() {
     // Очищаем текст
     setText('');
     
-    // Если сейчас не записываем, начинаем новую запись
-    if (!isRecording && recognitionRef.current) {
-      recognitionRef.current.start();
-      setIsRecording(true);
-      setAutoMode(true);
-    }
+    // Автоматически начинаем новую запись через короткий таймаут
+    setTimeout(() => {
+      if (recognitionRef.current) {
+        recognitionRef.current.start();
+        setIsRecording(true);
+        setAutoMode(true);
+      }
+    }, 300);
   };
 
   return (
@@ -161,28 +180,43 @@ export default function Index() {
 
         {/* Main recording interface */}
         <div className="flex flex-col items-center space-y-8">
-          {/* Recording button */}
-          <div className="relative">
-            <Button
-              onClick={toggleRecording}
-              size="lg"
-              className={`
-                w-24 h-24 rounded-full text-white font-semibold text-lg shadow-lg transition-all duration-300
-                ${isRecording 
-                  ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
-                  : 'bg-primary hover:bg-primary/90'
-                }
-              `}
-            >
-              <Icon 
-                name={isRecording ? "MicOff" : "Mic"} 
-                size={32}
-              />
-            </Button>
-            
-            {/* Pulse effect while listening */}
-            {isListening && (
-              <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping"></div>
+          {/* Recording controls */}
+          <div className="flex items-center space-x-4">
+            {/* Start Recording button */}
+            <div className="relative">
+              <Button
+                onClick={toggleRecording}
+                size="lg"
+                className={`
+                  w-24 h-24 rounded-full text-white font-semibold text-lg shadow-lg transition-all duration-300
+                  ${isRecording 
+                    ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
+                    : 'bg-primary hover:bg-primary/90'
+                  }
+                `}
+              >
+                <Icon 
+                  name={isRecording ? "MicOff" : "Mic"} 
+                  size={32}
+                />
+              </Button>
+              
+              {/* Pulse effect while listening */}
+              {isListening && (
+                <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping"></div>
+              )}
+            </div>
+
+            {/* Stop Recording button */}
+            {isRecording && (
+              <Button
+                onClick={stopRecording}
+                size="lg"
+                variant="outline"
+                className="w-16 h-16 rounded-full border-2 border-red-500 text-red-500 hover:bg-red-50 shadow-lg transition-all duration-300"
+              >
+                <Icon name="Square" size={24} />
+              </Button>
             )}
           </div>
 
@@ -190,7 +224,7 @@ export default function Index() {
           <div className="flex items-center space-x-2">
             <div className={`w-3 h-3 rounded-full ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-gray-300'}`}></div>
             <span className="text-sm font-medium text-gray-600">
-              {isRecording ? (autoMode ? 'Автозапись...' : 'Запись...') : isListening ? 'Обработка...' : 'Готов к записи'}
+              {isRecording ? (autoMode ? 'Автозапись... (нажмите ⏹ для остановки)' : 'Запись...') : isListening ? 'Обработка...' : 'Готов к записи'}
             </span>
           </div>
         </div>
