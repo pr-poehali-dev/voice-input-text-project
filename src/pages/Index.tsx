@@ -129,6 +129,23 @@ export default function Index() {
     navigator.clipboard.writeText(text);
   };
 
+  const copyAndRestart = () => {
+    if (!text) return;
+    
+    // Копируем текст
+    navigator.clipboard.writeText(text);
+    
+    // Очищаем текст
+    setText('');
+    
+    // Если сейчас не записываем, начинаем новую запись
+    if (!isRecording && recognitionRef.current) {
+      recognitionRef.current.start();
+      setIsRecording(true);
+      setAutoMode(true);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-6">
       <div className="w-full max-w-2xl space-y-8">
@@ -186,6 +203,16 @@ export default function Index() {
                 Распознанный текст
               </h3>
               <div className="flex space-x-2">
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={copyAndRestart}
+                  disabled={!text}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <Icon name="RotateCcw" size={16} className="mr-1" />
+                  Копировать и заново
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
