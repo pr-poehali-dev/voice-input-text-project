@@ -7,7 +7,9 @@ export default function Index() {
   const [isRecording, setIsRecording] = useState(false);
   const [text, setText] = useState('');
   const [isListening, setIsListening] = useState(false);
+  const [autoMode, setAutoMode] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // Check if browser supports speech recognition
@@ -32,12 +34,24 @@ export default function Index() {
         }
         if (finalTranscript) {
           setText(prev => prev + finalTranscript + ' ');
+          
+          // Если включен автоматический режим, останавливаем запись и перезапускаем через 1 секунду
+          if (autoMode) {
+            recognitionRef.current.stop();
+            restartTimeoutRef.current = setTimeout(() => {
+              if (autoMode && recognitionRef.current) {
+                recognitionRef.current.start();
+              }
+            }, 1000);
+          }
         }
       };
 
       recognitionRef.current.onend = () => {
         setIsListening(false);
-        setIsRecording(false);
+        if (!autoMode) {
+          setIsRecording(false);
+        }
       };
 
       recognitionRef.current.onerror = (event: any) => {
@@ -51,6 +65,9 @@ export default function Index() {
       if (recognitionRef.current) {
         recognitionRef.current.stop();
       }
+      if (restartTimeoutRef.current) {
+        clearTimeout(restartTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -63,9 +80,14 @@ export default function Index() {
     if (isRecording) {
       recognitionRef.current.stop();
       setIsRecording(false);
+      setAutoMode(false);
+      if (restartTimeoutRef.current) {
+        clearTimeout(restartTimeoutRef.current);
+      }
     } else {
       recognitionRef.current.start();
       setIsRecording(true);
+      setAutoMode(true);
     }
   };
 
@@ -121,7 +143,7 @@ export default function Index() {
           <div className="flex items-center space-x-2">
             <div className={`w-3 h-3 rounded-full ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-gray-300'}`}></div>
             <span className="text-sm font-medium text-gray-600">
-              {isRecording ? 'Запись...' : isListening ? 'Обработка...' : 'Готов к записи'}
+              {isRecording ? (autoMode ? 'Автозапись...' : 'Запись...') : isListening ? 'Обработка...' : 'Готов к записи'}
             </span>
           </div>
         </div>
@@ -171,7 +193,8 @@ export default function Index() {
 
         {/* Instructions */}
         <div className="text-center space-y-2 text-sm text-gray-500">
-          <p>💡 Говорите четко и не слишком быстро для лучшего распознавания</p>
+          <p>💡 В автоматическом режиме запись прерывается после каждого слова</p>
+          <p>🔄 Система автоматически возобновляет запись через 1 секунду</p>
           <p>🌐 Поддерживается русский язык</p>
         </div>
       </div>
