@@ -11,7 +11,35 @@ export default function Index() {
   const recognitionRef = useRef<any>(null);
   const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  const playStopSound = () => {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+    oscillator.frequency.setValueAtTime(400, audioContext.currentTime + 0.1);
+    
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+    
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + 0.2);
+  };
+
   useEffect(() => {
+    // Keyboard event handler for F12
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'F12') {
+        event.preventDefault();
+        toggleRecording();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
     // Check if browser supports speech recognition
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     
@@ -62,6 +90,7 @@ export default function Index() {
     }
 
     return () => {
+      document.removeEventListener('keydown', handleKeyDown);
       if (recognitionRef.current) {
         recognitionRef.current.stop();
       }
@@ -84,6 +113,7 @@ export default function Index() {
       if (restartTimeoutRef.current) {
         clearTimeout(restartTimeoutRef.current);
       }
+      playStopSound();
     } else {
       recognitionRef.current.start();
       setIsRecording(true);
@@ -195,6 +225,7 @@ export default function Index() {
         <div className="text-center space-y-2 text-sm text-gray-500">
           <p>💡 В автоматическом режиме запись прерывается после каждого слова</p>
           <p>🔄 Система автоматически возобновляет запись через 1 секунду</p>
+          <p>⌨️ Нажмите F12 для быстрого включения/выключения записи</p>
           <p>🌐 Поддерживается русский язык</p>
         </div>
       </div>
